@@ -61,7 +61,7 @@ export const AddTransactionScreen: React.FC<Props> = ({ navigation, route }) => 
         createdAt: isEditing ? editingTransaction!.createdAt : new Date().toISOString(),
       };
 
-      if (isEditing) await updateTransaction(transaction); else await addTransaction(transaction);
+      if (isEditing) await updateTransaction(transaction.id, transaction); else await addTransaction(transaction);
       navigation.goBack();
     } catch (error) {
       console.error("Save transaction error:", error);

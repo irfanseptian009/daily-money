@@ -11,7 +11,9 @@ import { SearchBar } from "../components/SearchBar";
 import { MonthFilter } from "../components/MonthFilter";
 import { useTransactions } from "../hooks/useTransactions";
 import { useSettings } from "../context/SettingsContext";
+import { usePremium } from "../context/PremiumContext";
 import { t } from "../config/translations";
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { Transaction, RootStackParamList } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
@@ -19,6 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { transactions, isLoading, totalIncome, totalExpense, balance, deleteTransaction, refresh } = useTransactions();
   const { colors, language, currency } = useSettings();
+  const { isPremium } = usePremium();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("all");
 
@@ -107,7 +110,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       {/* Bottom buttons */}
-      <View className="absolute bottom-8 right-5 items-center">
+      <View className="absolute right-5 items-center" style={{ bottom: isPremium ? 32 : 124 }}>
         <TouchableOpacity
           onPress={() => navigation.navigate("Settings")}
           activeOpacity={0.8}
@@ -133,6 +136,55 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text className="text-2xl font-bold text-white" style={{ marginTop: -2 }}>+</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom Ad / Premium Area */}
+      {isPremium ? (
+        // Premium user: show small badge, no ads
+        <View
+          className="items-center py-1.5 flex-row justify-center"
+          style={{ backgroundColor: "#fbbf2410", borderTopColor: "#fbbf2430", borderTopWidth: 1 }}
+        >
+          <Text className="text-xs" style={{ color: "#fbbf24" }}>
+            👑 Premium — {t(language, "premiumBenefitNoAds")}
+          </Text>
+        </View>
+      ) : (
+        // Free user: show ad + small upgrade nudge
+        <View>
+          {/* Subtle upgrade nudge above the ad */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Premium")}
+            activeOpacity={0.85}
+            className="flex-row items-center justify-center py-2 px-4"
+            style={{
+              backgroundColor: "#fbbf2408",
+              borderTopColor: "#fbbf2422",
+              borderTopWidth: 1,
+            }}
+          >
+            <Text className="text-xs font-semibold mr-1" style={{ color: "#fbbf24" }}>
+              👑 {t(language, "unlockPremium")}
+            </Text>
+            <Text className="text-xs" style={{ color: colors.textMuted }}>
+              · Rp10rb - Rp20rb
+            </Text>
+          </TouchableOpacity>
+
+          {/* Google AdMob Banner */}
+          <View className="items-center pb-2 bg-transparent justify-end">
+            <BannerAd
+              unitId={TestIds.BANNER}
+              size={BannerAdSize.BANNER}
+              requestOptions={{
+                requestNonPersonalizedAdsOnly: true,
+              }}
+              onAdFailedToLoad={(error) => {
+                console.warn('Ad Failed To Load', error);
+              }}
+            />
+          </View>
+        </View>
+      )}
     </View>
   );
 };

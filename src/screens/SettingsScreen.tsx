@@ -5,6 +5,7 @@ import {
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { useSettings } from "../context/SettingsContext";
+import { usePremium } from "../context/PremiumContext";
 import { t } from "../config/translations";
 import { LANGUAGES } from "../config/translations";
 import { CURRENCIES, getCurrencyByCode } from "../config/currencies";
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currency, setCurrency, language, setLanguage, theme, setTheme, colors } = useSettings();
+  const { isPremium } = usePremium();
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
@@ -96,6 +98,54 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             )}
           </>
         ))}
+
+        {/* Premium Section */}
+        <View className="mx-4 mb-6">
+          <Text style={{ color: colors.textSecondary }} className="text-sm font-semibold uppercase tracking-wider mb-3">
+            {t(language, "premium")}
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Premium")}
+            activeOpacity={0.7}
+            className="rounded-xl overflow-hidden"
+            style={{
+              borderWidth: isPremium ? 1.5 : 1,
+              borderColor: isPremium ? "#fbbf24" : colors.border,
+              backgroundColor: isPremium ? "#fbbf2408" : colors.bgCard,
+            }}
+          >
+            <View className="flex-row items-center px-4 py-4">
+              <Text className="text-lg mr-3">👑</Text>
+              <View className="flex-1">
+                <Text
+                  className="text-base font-semibold"
+                  style={{ color: isPremium ? "#fbbf24" : colors.text }}
+                >
+                  {isPremium ? t(language, "premiumActiveTitle") : t(language, "unlockPremium")}
+                </Text>
+                <Text
+                  className="text-xs mt-0.5"
+                  style={{ color: isPremium ? "#fbbf2499" : colors.textMuted }}
+                >
+                  {isPremium
+                    ? t(language, "premiumBenefitNoAds")
+                    : `Rp10.000 – Rp20.000 · ${t(language, "premiumOneTimePay")}`}
+                </Text>
+              </View>
+              {isPremium ? (
+                <View
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: "#fbbf2420", borderColor: "#fbbf2460", borderWidth: 1 }}
+                >
+                  <Text className="text-xs font-bold" style={{ color: "#fbbf24" }}>✓ AKTIF</Text>
+                </View>
+              ) : (
+                <Text style={{ color: colors.textMuted }}>›</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
 
       {/* Currency Modal */}

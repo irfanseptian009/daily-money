@@ -1,15 +1,18 @@
 import "./global.css";
-import React from "react";
+import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
+import mobileAds from 'react-native-google-mobile-ads';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { AddTransactionScreen } from "./src/screens/AddTransactionScreen";
 import { StatisticsScreen } from "./src/screens/StatisticsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { ManageCategoriesScreen } from "./src/screens/ManageCategoriesScreen";
+import { PremiumScreen } from "./src/screens/PremiumScreen";
 import { RootStackParamList } from "./src/types";
 import { SettingsProvider, useSettings } from "./src/context/SettingsContext";
 import { CategoriesProvider } from "./src/context/CategoriesContext";
+import { PremiumProvider } from "./src/context/PremiumContext";
 import { t } from "./src/config/translations";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,18 +62,42 @@ function AppNavigator() {
         component={ManageCategoriesScreen}
         options={{ title: t(language, "manageCategories"), presentation: "modal" }}
       />
+      <Stack.Screen
+        name="Premium"
+        component={PremiumScreen}
+        options={{
+          title: "👑 Premium",
+          presentation: "modal",
+          headerStyle: { backgroundColor: "#020617" },
+          headerTintColor: "#fbbf24",
+          headerTitleStyle: { fontWeight: "700", fontSize: 18, color: "#fbbf24" },
+        }}
+      />
     </Stack.Navigator>
   );
 }
 
 export default function App() {
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .then(adapterStatuses => {
+        console.log("AdMob SDK Initialized", adapterStatuses);
+      })
+      .catch(err => {
+        console.error("AdMob initialization failed", err);
+      });
+  }, []);
+
   return (
     <SettingsProvider>
-      <CategoriesProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </CategoriesProvider>
+      <PremiumProvider>
+        <CategoriesProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </CategoriesProvider>
+      </PremiumProvider>
     </SettingsProvider>
   );
 }

@@ -30,4 +30,5 @@ export type RootStackParamList = {
   Calculator: undefined;
   Settings: undefined;
   ManageCategories: undefined;
+  Premium: undefined;
 };
