@@ -8,7 +8,8 @@ export type CategoryId = string;
 export interface CategoryInfo {
   id: CategoryId;
   label: string;
-  emoji: string;
+  icon: string;
+  emoji?: string;
   type: TransactionType;
   isCustom?: boolean;
 }

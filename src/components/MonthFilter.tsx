@@ -30,7 +30,7 @@ export const MonthFilter: React.FC<MonthFilterProps> = ({
   onSelect,
   availableMonths,
 }) => {
-  const { colors, language } = useSettings();
+  const { colors, language, palette } = useSettings();
   const months = useMemo(() => {
     return ["all", ...availableMonths];
   }, [availableMonths]);
@@ -45,14 +45,19 @@ export const MonthFilter: React.FC<MonthFilterProps> = ({
               key={month}
               onPress={() => onSelect(month)}
               activeOpacity={0.7}
-              className={`mr-2 px-4 py-2 rounded-full`}
+              className={`mr-2 px-4 py-2.5 rounded-full`}
               style={{
-                backgroundColor: isSelected ? "#10b981" : colors.bgCard,
+                backgroundColor: isSelected ? palette.main : colors.bgCard,
                 borderColor: colors.border,
                 borderWidth: isSelected ? 0 : 1,
+                shadowColor: palette.main,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: isSelected ? 0.2 : 0.05,
+                shadowRadius: 8,
+                elevation: isSelected ? 2 : 1,
               }}
             >
-              <Text className="text-xs font-semibold" style={{ color: isSelected ? "#fff" : colors.textSecondary }}>
+              <Text className="text-xs font-bold" style={{ color: isSelected ? "#fff" : colors.textSecondary }}>
                 {formatMonthLabel(month, language)}
               </Text>
             </TouchableOpacity>

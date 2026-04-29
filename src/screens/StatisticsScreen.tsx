@@ -1,7 +1,17 @@
-import React, { useCallback, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, StatusBar,
-  Share, Alert, Dimensions, Animated,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ImageBackground,
+  StatusBar,
+  Share,
+  Alert,
+  Dimensions,
+  Animated,
+  Easing,
+  Modal,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
@@ -15,54 +25,133 @@ import { TransactionType, RootStackParamList, CategoryId } from "../types";
 type Props = NativeStackScreenProps<RootStackParamList, "Statistics">;
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const TRACK_WIDTH = SCREEN_WIDTH - 92;
 
 interface CategoryBreakdown {
   category: CategoryId;
-  emoji: string;
   label: string;
   total: number;
   count: number;
   percentage: number;
 }
 
-// ─── Mini bar chart using plain Views ────────────────────────────────────────
-const BarChart: React.FC<{
+const StatCard: React.FC<{
+  label: string;
+  value: string;
+  icon: string;
+  valueColor?: string;
+  cardBg: string;
+  cardBorder: string;
+  text: string;
+  textMuted: string;
+  isDark: boolean;
+}> = ({ label, value, icon, valueColor, cardBg, cardBorder, text, textMuted, isDark }) => {
+  const cardBgColor = isDark ? "#1a1f3a" : "#ffffff";
+  const shadowColor = isDark ? (valueColor || "#000000") : "#000000";
+  const labelColor = isDark ? "#9ca3af" : "#6b7280";
+  const valueTextColor = isDark ? "#f3f4f6" : "#1f2937";
+
+  return (
+    <View
+      style={{
+        width: 160,
+        marginRight: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        backgroundColor: cardBgColor,
+        shadowColor: shadowColor,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: isDark ? 0.25 : 0.08,
+        shadowRadius: isDark ? 10 : 12,
+        elevation: isDark ? 6 : 4,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          backgroundColor: valueColor ? valueColor + "18" : "#00000018",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Text style={{ fontSize: 18, color: valueColor || "#000", fontWeight: "800" }}>{icon}</Text>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: labelColor, fontSize: 9, fontWeight: "600", letterSpacing: 0.2 }} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={{ color: valueTextColor, fontWeight: "900", fontSize: 18, letterSpacing: -0.3, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const AnimatedTrendChart: React.FC<{
   data: { label: string; income: number; expense: number }[];
   maxVal: number;
-  colors: any;
-  fmt: (n: number) => string;
-}> = ({ data, maxVal, colors, fmt }) => {
-  const BAR_HEIGHT = 120;
+  textMuted: string;
+}> = ({ data, maxVal, textMuted }) => {
+  const animBars = useRef<Animated.Value[]>([]);
+
+  if (animBars.current.length !== data.length * 2) {
+    animBars.current = Array.from({ length: data.length * 2 }, () => new Animated.Value(0));
+  }
+
+  useEffect(() => {
+    animBars.current.forEach((v) => v.setValue(0));
+    Animated.stagger(
+      70,
+      animBars.current.map((v) =>
+        Animated.timing(v, {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        })
+      )
+    ).start();
+  }, [data]);
+
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", height: BAR_HEIGHT + 40 }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-end", height: 170 }}>
       {data.map((d, i) => {
-        const incomeH = maxVal > 0 ? (d.income / maxVal) * BAR_HEIGHT : 0;
-        const expenseH = maxVal > 0 ? (d.expense / maxVal) * BAR_HEIGHT : 0;
+        const incomeTarget = Math.max((d.income / maxVal) * 120, 4);
+        const expenseTarget = Math.max((d.expense / maxVal) * 120, 4);
+        const incomeAnim = animBars.current[i * 2];
+        const expenseAnim = animBars.current[i * 2 + 1];
+
         return (
-          <View key={i} style={{ flex: 1, alignItems: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "flex-end", height: BAR_HEIGHT }}>
-              <View
+          <View key={d.label} style={{ flex: 1, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", height: 124 }}>
+              <Animated.View
                 style={{
-                  width: 8,
-                  height: Math.max(incomeH, 2),
-                  backgroundColor: "#10b981",
-                  borderRadius: 4,
-                  marginRight: 2,
+                  width: 9,
+                  marginRight: 3,
+                  borderRadius: 6,
+                  backgroundColor: "#fdba74",
+                  height: incomeAnim.interpolate({ inputRange: [0, 1], outputRange: [3, incomeTarget] }),
                 }}
               />
-              <View
+              <Animated.View
                 style={{
-                  width: 8,
-                  height: Math.max(expenseH, 2),
-                  backgroundColor: "#ef4444",
-                  borderRadius: 4,
+                  width: 9,
+                  borderRadius: 6,
+                  backgroundColor: "#ea580c",
+                  height: expenseAnim.interpolate({ inputRange: [0, 1], outputRange: [3, expenseTarget] }),
                 }}
               />
             </View>
-            <Text
-              style={{ color: colors.textMuted, fontSize: 9, marginTop: 4, textAlign: "center" }}
-              numberOfLines={1}
-            >
+            <Text style={{ color: textMuted, fontSize: 10, marginTop: 6 }} numberOfLines={1}>
               {d.label}
             </Text>
           </View>
@@ -72,171 +161,313 @@ const BarChart: React.FC<{
   );
 };
 
-// ─── Donut/Pie ring using stacked Views ──────────────────────────────────────
-const DonutRing: React.FC<{
-  items: { percentage: number; color: string }[];
-  size?: number;
-  label: string;
-  value: string;
-  valueColor: string;
-}> = ({ items, size = 100, label, value, valueColor }) => {
-  const DONUT_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
-  return (
-    <View style={{ alignItems: "center" }}>
-      <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", position: "relative" }}>
-        {items.length === 0 ? (
-          <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: "#334155" }} />
-        ) : (
-          items.map((item, idx) => {
-            const color = DONUT_COLORS[idx % DONUT_COLORS.length];
-            return (
-              <View
-                key={idx}
-                style={{
-                  position: "absolute",
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: size / 2,
-                  backgroundColor: color,
-                  opacity: 0.85,
-                }}
-              />
-            );
-          })
-        )}
-        {/* Inner circle to create donut effect */}
+const AnimatedLineTrendChart: React.FC<{
+  data: { label: string; income: number; expense: number }[];
+  maxVal: number;
+  text: string;
+  textMuted: string;
+  cardBorder: string;
+  incomeColor: string;
+  expenseColor: string;
+}> = ({ data, maxVal, text, textMuted, cardBorder, incomeColor, expenseColor }) => {
+  const lineAnim = useRef(new Animated.Value(0)).current;
+  const chartWidth = TRACK_WIDTH;
+  const axisWidth = 36;
+  const plotWidth = chartWidth - axisWidth - 8;
+  const chartHeight = 122;
+
+  useEffect(() => {
+    lineAnim.setValue(0);
+    Animated.timing(lineAnim, {
+      toValue: 1,
+      duration: 480,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [data, lineAnim]);
+
+  const compactAmount = useCallback((value: number) => {
+    if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+    return `${Math.round(value)}`;
+  }, []);
+
+  const makePoints = useCallback(
+    (key: "income" | "expense") => {
+      if (data.length === 0) return [] as { x: number; y: number; label: string }[];
+      const step = data.length > 1 ? plotWidth / (data.length - 1) : 0;
+      return data.map((d, i) => ({
+        label: d.label,
+        x: i * step,
+        y: chartHeight - ((d[key] / maxVal) * chartHeight || 0),
+      }));
+    },
+    [data, plotWidth, chartHeight, maxVal]
+  );
+
+  const incomePoints = makePoints("income");
+  const expensePoints = makePoints("expense");
+
+  const renderSegments = (points: { x: number; y: number }[], color: string, prefix: string) =>
+    points.slice(0, -1).map((p, i) => {
+      const n = points[i + 1];
+      const dx = n.x - p.x;
+      const dy = n.y - p.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+      const midX = (p.x + n.x) / 2;
+      const midY = (p.y + n.y) / 2;
+
+      return (
         <View
+          key={`${prefix}-seg-${i}`}
           style={{
             position: "absolute",
-            top: size * 0.22,
-            left: size * 0.22,
-            width: size * 0.56,
-            height: size * 0.56,
-            borderRadius: size * 0.28,
-            backgroundColor: "#0f172a",
-            alignItems: "center",
-            justifyContent: "center",
+            left: midX - length / 2,
+            top: midY - 1.25,
+            width: length,
+            height: 2.5,
+            borderRadius: 2,
+            backgroundColor: color,
+            transform: [{ rotate: `${angle}deg` }],
           }}
-        >
-          <Text style={{ color: valueColor, fontWeight: "800", fontSize: size * 0.16 }} numberOfLines={1}>
-            {value}
-          </Text>
+        />
+      );
+    });
+
+  const renderPoints = (points: { x: number; y: number }[], color: string, prefix: string) =>
+    points.map((p, i) => (
+      <View
+        key={`${prefix}-dot-${i}`}
+        style={{
+          position: "absolute",
+          left: p.x - 4,
+          top: p.y - 4,
+          width: 8,
+          height: 8,
+          borderRadius: 999,
+          backgroundColor: color,
+          borderWidth: 1.6,
+          borderColor: "#fff",
+        }}
+      />
+    ));
+
+  const lastPoint = data.length > 0 ? data[data.length - 1] : null;
+
+  return (
+    <Animated.View
+      style={{
+        opacity: lineAnim,
+        transform: [{ translateY: lineAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+      }}
+    >
+      <View style={{ marginBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text style={{ color: text, fontSize: 13, fontWeight: "800" }}>Flow Curve</Text>
+        <Text style={{ color: textMuted, fontSize: 11 }}>Income vs Expense</Text>
+      </View>
+
+      {lastPoint && (
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ width: 9, height: 9, borderRadius: 999, backgroundColor: incomeColor, marginRight: 6 }} />
+            <Text style={{ color: textMuted, fontSize: 11, fontWeight: "600" }}>Income {compactAmount(lastPoint.income)}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ width: 9, height: 9, borderRadius: 999, backgroundColor: expenseColor, marginRight: 6 }} />
+            <Text style={{ color: textMuted, fontSize: 11, fontWeight: "600" }}>Expense {compactAmount(lastPoint.expense)}</Text>
+          </View>
+        </View>
+      )}
+
+      <View
+        style={{
+          width: chartWidth,
+          height: chartHeight + 42,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: cardBorder,
+          paddingHorizontal: 8,
+          paddingTop: 10,
+          paddingBottom: 10,
+        }}
+      >
+        <View style={{ flexDirection: "row" }}>
+          <View style={{ width: axisWidth, height: chartHeight, justifyContent: "space-between", paddingBottom: 2 }}>
+            <Text style={{ color: textMuted, fontSize: 10, textAlign: "right" }}>{compactAmount(maxVal)}</Text>
+            <Text style={{ color: textMuted, fontSize: 10, textAlign: "right" }}>{compactAmount(maxVal / 2)}</Text>
+            <Text style={{ color: textMuted, fontSize: 10, textAlign: "right" }}>0</Text>
+          </View>
+
+          <View style={{ width: plotWidth, height: chartHeight, marginLeft: 8 }}>
+            {[0, 1, 2].map((idx) => (
+              <View
+                key={`grid-${idx}`}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: (chartHeight / 2) * idx,
+                  height: 1,
+                  backgroundColor: cardBorder,
+                  opacity: 0.6,
+                }}
+              />
+            ))}
+
+            {renderSegments(incomePoints, incomeColor, "income")}
+            {renderSegments(expensePoints, expenseColor, "expense")}
+            {renderPoints(incomePoints, incomeColor, "income")}
+            {renderPoints(expensePoints, expenseColor, "expense")}
+          </View>
+        </View>
+
+        <View style={{ marginLeft: axisWidth + 8, marginTop: 6 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            {data.map((d, i) => (
+              <Text
+                key={`label-${d.label}-${i}`}
+                style={{
+                  color: textMuted,
+                  fontSize: 10,
+                  width: data.length > 1 ? plotWidth / data.length : plotWidth,
+                  textAlign: "center",
+                  fontWeight: "700",
+                }}
+              >
+                {d.label}
+              </Text>
+            ))}
+          </View>
+          <Text style={{ color: textMuted, fontSize: 10, marginTop: 4, textAlign: "center" }}>Month</Text>
         </View>
       </View>
-      <Text style={{ color: "#94a3b8", fontSize: 11, marginTop: 4 }}>{label}</Text>
-    </View>
+    </Animated.View>
   );
 };
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-const StatCard: React.FC<{
-  label: string;
-  value: string;
-  emoji: string;
-  valueColor?: string;
-  colors: any;
-}> = ({ label, value, emoji, valueColor, colors }) => (
-  <View
-    style={{
-      flex: 1,
-      margin: 4,
-      padding: 14,
-      borderRadius: 14,
-      backgroundColor: colors.bgCard,
-      borderWidth: 1,
-      borderColor: colors.border,
-    }}
-  >
-    <Text style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</Text>
-    <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 2 }}>{label}</Text>
-    <Text
-      style={{ color: valueColor || colors.text, fontWeight: "800", fontSize: 15 }}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-    >
-      {value}
-    </Text>
-  </View>
-);
-
-// ─── Main Screen ─────────────────────────────────────────────────────────────
-export const StatisticsScreen: React.FC<Props> = ({ navigation }) => {
+export const StatisticsScreen: React.FC<Props> = () => {
   const { transactions, totalIncome, totalExpense, refresh } = useTransactions();
-  const { colors, language, currency } = useSettings();
+  const { colors, language, currency, theme, palette } = useSettings();
   const { getCategoryInfo } = useCategories();
   const [viewType, setViewType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [exporting, setExporting] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<string>("all");
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  const isDark = theme === "dark";
+  const cardBg = isDark ? "#0f172a" : "#ffffff";
+  const cardBorder = isDark ? "#1f2937" : "#f1f5f9";
+
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  const cardsAnim = useRef(new Animated.Value(0)).current;
+  const chartAnim = useRef(new Animated.Value(0)).current;
+  const listAnim = useRef(new Animated.Value(0)).current;
+
+  const animateIn = useCallback(() => {
+    heroAnim.setValue(0);
+    cardsAnim.setValue(0);
+    chartAnim.setValue(0);
+    listAnim.setValue(0);
+
+    Animated.sequence([
+      Animated.timing(heroAnim, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(cardsAnim, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(chartAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      ]),
+      Animated.timing(listAnim, { toValue: 1, duration: 360, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+    ]).start();
+  }, [heroAnim, cardsAnim, chartAnim, listAnim]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+      animateIn();
+    }, [refresh, animateIn])
+  );
 
   const fmt = useCallback((amount: number) => formatCurrency(amount, currency), [currency]);
 
-  const balance = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
+  const filteredData = useMemo(() => {
+    return filterMonth === "all" ? transactions : transactions.filter((tx) => tx.date.startsWith(filterMonth));
+  }, [transactions, filterMonth]);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach((tx) => months.add(tx.date.substring(0, 7)));
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [transactions]);
+
+  const fTotalIncome = useMemo(() => filteredData.filter(t => t.type === TransactionType.INCOME).reduce((s, t) => s + t.amount, 0), [filteredData]);
+  const fTotalExpense = useMemo(() => filteredData.filter(t => t.type === TransactionType.EXPENSE).reduce((s, t) => s + t.amount, 0), [filteredData]);
+  const balance = fTotalIncome - fTotalExpense;
+  const savingsRate = fTotalIncome > 0 ? ((fTotalIncome - fTotalExpense) / fTotalIncome) * 100 : 0;
 
   const breakdown = useMemo((): CategoryBreakdown[] => {
-    const filtered = transactions.filter((tx) => tx.type === viewType);
+    const filtered = filteredData.filter((tx) => tx.type === viewType);
     const total = filtered.reduce((s, tx) => s + tx.amount, 0);
     const map = new Map<CategoryId, { total: number; count: number }>();
+
     filtered.forEach((tx) => {
       const cat = tx.category || (viewType === TransactionType.EXPENSE ? "other_expense" : "other_income");
       const e = map.get(cat) || { total: 0, count: 0 };
       map.set(cat, { total: e.total + tx.amount, count: e.count + 1 });
     });
+
     const result: CategoryBreakdown[] = [];
     map.forEach((v, k) => {
       const info = getCategoryInfo(k);
       result.push({
-        category: k, emoji: info.emoji, label: info.label,
-        total: v.total, count: v.count,
+        category: k,
+        label: info.label,
+        total: v.total,
+        count: v.count,
         percentage: total > 0 ? (v.total / total) * 100 : 0,
       });
     });
-    return result.sort((a, b) => b.total - a.total);
-  }, [transactions, viewType, getCategoryInfo]);
 
-  // Last 6 months for bar chart
+    return result.sort((a, b) => b.total - a.total);
+  }, [filteredData, viewType, getCategoryInfo]);
+
   const monthlyData = useMemo(() => {
     const months = new Map<string, { income: number; expense: number }>();
     transactions.forEach((tx) => {
       const mk = tx.date.substring(0, 7);
       const e = months.get(mk) || { income: 0, expense: 0 };
-      if (tx.type === TransactionType.INCOME) e.income += tx.amount; else e.expense += tx.amount;
+      if (tx.type === TransactionType.INCOME) e.income += tx.amount;
+      else e.expense += tx.amount;
       months.set(mk, e);
     });
-    return Array.from(months.entries())
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .slice(0, 6)
-      .reverse();
+
+    return Array.from(months.entries()).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).reverse();
   }, [transactions]);
 
-  const chartData = useMemo(() =>
-    monthlyData.map(([month, d]) => {
-      const [y, m] = month.split("-");
-      const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-      return { label, income: d.income, expense: d.expense };
-    }),
-    [monthlyData]
+  const chartData = useMemo(
+    () =>
+      monthlyData.map(([month, d]) => {
+        const [y, m] = month.split("-");
+        const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString(language === "id" ? "id-ID" : "en-US", {
+          month: "short",
+        });
+        return { label, income: d.income, expense: d.expense };
+      }),
+    [monthlyData, language]
   );
 
-  const chartMaxVal = useMemo(() =>
-    Math.max(...chartData.map((d) => Math.max(d.income, d.expense)), 1),
-    [chartData]
-  );
+  const chartMaxVal = useMemo(() => Math.max(...chartData.map((d) => Math.max(d.income, d.expense)), 1), [chartData]);
 
-  const DONUT_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
-
-  const expenses = useMemo(() => transactions.filter((tx) => tx.type === TransactionType.EXPENSE), [transactions]);
-  const incomes = useMemo(() => transactions.filter((tx) => tx.type === TransactionType.INCOME), [transactions]);
+  const expenses = useMemo(() => filteredData.filter((tx) => tx.type === TransactionType.EXPENSE), [filteredData]);
   const avgExpense = expenses.length > 0 ? expenses.reduce((s, tx) => s + tx.amount, 0) / expenses.length : 0;
   const largestExpense = expenses.length > 0 ? Math.max(...expenses.map((tx) => tx.amount)) : 0;
 
-  // ── CSV Export ────────────────────────────────────────────────────────────
   const handleExport = useCallback(async () => {
     if (transactions.length === 0) {
       Alert.alert(t(language, "noData"), t(language, "noDataDesc"));
       return;
     }
+
     setExporting(true);
     try {
       const header = "No,Date,Type,Category,Note,Amount,Currency\n";
@@ -258,201 +489,290 @@ export const StatisticsScreen: React.FC<Props> = ({ navigation }) => {
       const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       const title = `DailyMoney_${dateStr}.csv`;
 
-      await Share.share({
-        message: csvContent,
-        title,
-      });
-    } catch (e) {
-      console.error("Export error:", e);
+      await Share.share({ message: csvContent, title });
+    } catch {
       Alert.alert("Export Error", "Could not export data. Please try again.");
     } finally {
       setExporting(false);
     }
   }, [transactions, language, getCategoryInfo, currency, totalIncome, totalExpense, balance]);
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  const hasData = transactions.length > 0;
+  const hasData = filteredData.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Header summary ── */}
-        <View
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
+
+        {/* Hero Section */}
+        <Animated.View
           style={{
-            margin: 16,
-            borderRadius: 20,
+            opacity: heroAnim,
+            transform: [{ translateY: heroAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+            marginHorizontal: 16,
+            marginTop: 16,
+            marginBottom: 10,
+            borderRadius: 32,
             overflow: "hidden",
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.bgCard,
+            borderWidth: 1.25,
+            borderColor: palette.soft,
+            backgroundColor: palette.main,
+            shadowColor: palette.main,
+            shadowOffset: { width: 0, height: 14 },
+            shadowOpacity: 0.2,
+            shadowRadius: 24,
+            elevation: 7,
           }}
         >
-          <View
+          <View className="absolute -right-12 -top-16 w-40 h-40 rounded-full" style={{ backgroundColor: "#ffffff22" }} />
+          <View className="absolute -left-14 -bottom-16 w-48 h-48 rounded-full" style={{ backgroundColor: "#ffffff12" }} />
+
+          <ImageBackground
+            source={require("../../assets/statistic_summary.png")}
+            resizeMode="cover"
+            imageStyle={{ opacity: isDark ? 0.2 : 0.18 }}
+            style={{ width: "100%" }}
+          >
+
+            <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 18, alignItems: "center" }}>
+              <Text style={{ color: "#fff7ed", fontSize: 12, fontWeight: "800", letterSpacing: 1.3, textTransform: "uppercase", marginBottom: 7 }}>
+                {t(language, "overview")}
+              </Text>
+              <Text style={{ fontSize: 42, fontWeight: "900", color: "#fff", letterSpacing: -1.7 }}>{fmt(balance)}</Text>
+              <Text style={{ color: "#fff7ed", fontSize: 13, marginTop: 4, fontWeight: "500" }}>{t(language, "currentBalance")}</Text>
+
+
+              <TouchableOpacity
+                onPress={handleExport}
+                disabled={exporting}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: "#ffffff24",
+                  marginTop: 12,
+                  borderRadius: 999,
+                  paddingHorizontal: 15,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: "#ffffff16"
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12, letterSpacing: 0.4 }}>
+                  {exporting ? "Exporting..." : "Export CSV"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: "row", borderTopWidth: 1.25, borderTopColor: "#ffffff30" }}>
+              <View style={{ flex: 1, alignItems: "center", paddingVertical: 16, borderRightWidth: 1.25, borderRightColor: "#ffffff22" }}>
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 18 }}>▲ {fmt(fTotalIncome)}</Text>
+                <Text style={{ color: "#fff7ed", fontSize: 12, marginTop: 3, fontWeight: "600" }}>{t(language, "income")}</Text>
+              </View>
+              <View style={{ flex: 1, alignItems: "center", paddingVertical: 16 }}>
+                <Text style={{ color: "#fff", fontWeight: "900", fontSize: 18 }}>▼ {fmt(fTotalExpense)}</Text>
+                <Text style={{ color: "#fff7ed", fontSize: 12, marginTop: 3, fontWeight: "600" }}>{t(language, "expense")}</Text>
+              </View>
+            </View>
+          </ImageBackground>
+        </Animated.View>
+
+        {/* Stat Cards */}
+        {hasData && (
+          <Animated.View
             style={{
-              paddingHorizontal: 20,
-              paddingTop: 20,
-              paddingBottom: 16,
-              alignItems: "center",
+              opacity: cardsAnim,
+              transform: [{ translateY: cardsAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+              marginBottom: 8,
             }}
           >
-            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
-              {t(language, "overview")}
-            </Text>
-            <Text
-              style={{
-                fontSize: 36,
-                fontWeight: "900",
-                color: balance >= 0 ? "#10b981" : "#ef4444",
-                letterSpacing: -1,
-              }}
+            <View style={{ marginHorizontal: 16, marginBottom: 10 }}>
+
+
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 4 }}
+              decelerationRate="fast"
+              snapToInterval={182}
             >
-              {fmt(balance)}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
-              {t(language, "currentBalance")}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: colors.border }}>
-            <View style={{ flex: 1, alignItems: "center", paddingVertical: 14, borderRightWidth: 1, borderRightColor: colors.border }}>
-              <Text style={{ color: "#10b981", fontWeight: "800", fontSize: 16 }}>▲ {fmt(totalIncome)}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{t(language, "income")}</Text>
-            </View>
-            <View style={{ flex: 1, alignItems: "center", paddingVertical: 14 }}>
-              <Text style={{ color: "#ef4444", fontWeight: "800", fontSize: 16 }}>▼ {fmt(totalExpense)}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{t(language, "expense")}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── 4 stat cards ── */}
-        {hasData && (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: 12, marginBottom: 4 }}>
-            <StatCard
-              label={t(language, "savingsRate")}
-              value={`${savingsRate.toFixed(1)}%`}
-              emoji="📈"
-              valueColor={savingsRate >= 0 ? "#10b981" : "#ef4444"}
-              colors={colors}
-            />
-            <StatCard
-              label={t(language, "transactions")}
-              value={String(transactions.length)}
-              emoji="📋"
-              valueColor="#6366f1"
-              colors={colors}
-            />
-            <StatCard
-              label={t(language, "avgExpense")}
-              value={fmt(avgExpense)}
-              emoji="💸"
-              valueColor="#f59e0b"
-              colors={colors}
-            />
-            <StatCard
-              label={t(language, "largestExpense")}
-              value={fmt(largestExpense)}
-              emoji="🔴"
-              valueColor="#ef4444"
-              colors={colors}
-            />
-          </View>
+              <StatCard
+                label={t(language, "savingsRate")}
+                value={`${savingsRate.toFixed(1)}%`}
+                icon="$"
+                valueColor={palette.deep}
+                cardBg={cardBg}
+                cardBorder={cardBorder}
+                text={colors.text}
+                textMuted={colors.textMuted}
+                isDark={isDark}
+              />
+              <StatCard
+                label={t(language, "transactions")}
+                value={String(filteredData.length)}
+                icon="🧾"
+                valueColor={palette.deep}
+                cardBg={cardBg}
+                cardBorder={cardBorder}
+                text={colors.text}
+                textMuted={colors.textMuted}
+                isDark={isDark}
+              />
+              <StatCard
+                label={t(language, "avgExpense")}
+                value={fmt(avgExpense)}
+                icon="📉"
+                valueColor={palette.main}
+                cardBg={cardBg}
+                cardBorder={cardBorder}
+                text={colors.text}
+                textMuted={colors.textMuted}
+                isDark={isDark}
+              />
+              <StatCard
+                label={t(language, "largestExpense")}
+                value={fmt(largestExpense)}
+                icon="💸"
+                valueColor={palette.deep}
+                cardBg={cardBg}
+                cardBorder={cardBorder}
+                text={colors.text}
+                textMuted={colors.textMuted}
+                isDark={isDark}
+              />
+              <View style={{ width: 4 }} />
+            </ScrollView>
+          </Animated.View>
         )}
 
-        {/* ── Monthly Bar Chart ── */}
         {chartData.length > 0 && (
-          <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
-              {t(language, "monthlyTrend")}
-            </Text>
+          <Animated.View
+            style={{
+              opacity: chartAnim,
+              transform: [{ translateY: chartAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+              marginHorizontal: 16,
+              marginTop: 8,
+              marginBottom: 4,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 2 }}>
+              <View>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 }}>
+                  {t(language, "monthlyTrend")}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>LAST 6 MONTHS</Text>
+              </View>
+            </View>
+
             <View
               style={{
-                backgroundColor: colors.bgCard,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-                padding: 16,
+                backgroundColor: cardBg,
+                borderRadius: 30,
+                borderWidth: 1.25,
+                borderColor: cardBorder,
+                padding: 18,
+                shadowColor: palette.main,
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 18,
+                elevation: 2,
               }}
             >
-              <BarChart data={chartData} maxVal={chartMaxVal} colors={colors} fmt={fmt} />
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: "800", marginBottom: 10 }}>Monthly Bars</Text>
+              <AnimatedTrendChart data={chartData} maxVal={chartMaxVal} textMuted={colors.textMuted} />
 
-              {/* Chart legend */}
-              <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 8, gap: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 12, gap: 20 }}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#10b981", marginRight: 5 }} />
-                  <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t(language, "income")}</Text>
+                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: palette.soft, marginRight: 6 }} />
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "600" }}>{t(language, "income")}</Text>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#ef4444", marginRight: 5 }} />
-                  <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t(language, "expense")}</Text>
+                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: palette.deep, marginRight: 6 }} />
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "600" }}>{t(language, "expense")}</Text>
                 </View>
               </View>
 
-              {/* Month detail rows */}
-              <View style={{ marginTop: 12 }}>
-                {chartData.slice().reverse().map((d, i) => {
-                  const domainMax = Math.max(d.income, d.expense, 1);
-                  return (
-                    <View key={i} style={{ marginBottom: i < chartData.length - 1 ? 10 : 0 }}>
-                      <Text style={{ color: colors.text, fontSize: 12, fontWeight: "600", marginBottom: 4 }}>{d.label}</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
-                        <Text style={{ color: colors.textMuted, fontSize: 10, width: 48 }}>{t(language, "income")}</Text>
-                        <View style={{ flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, marginRight: 8, overflow: "hidden" }}>
-                          <View style={{ width: `${(d.income / chartMaxVal) * 100}%`, height: "100%", backgroundColor: "#10b981", borderRadius: 3 }} />
-                        </View>
-                        <Text style={{ color: "#10b981", fontSize: 10, fontWeight: "700", minWidth: 60, textAlign: "right" }} numberOfLines={1}>{fmt(d.income)}</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <Text style={{ color: colors.textMuted, fontSize: 10, width: 48 }}>{t(language, "expense")}</Text>
-                        <View style={{ flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, marginRight: 8, overflow: "hidden" }}>
-                          <View style={{ width: `${(d.expense / chartMaxVal) * 100}%`, height: "100%", backgroundColor: "#ef4444", borderRadius: 3 }} />
-                        </View>
-                        <Text style={{ color: "#ef4444", fontSize: 10, fontWeight: "700", minWidth: 60, textAlign: "right" }} numberOfLines={1}>{fmt(d.expense)}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
+              <View style={{ height: 1, backgroundColor: cardBorder, marginVertical: 14, opacity: 0.8 }} />
+
+              <AnimatedLineTrendChart
+                data={chartData}
+                maxVal={chartMaxVal}
+                text={colors.text}
+                textMuted={colors.textMuted}
+                cardBorder={cardBorder}
+                incomeColor={palette.soft}
+                expenseColor={palette.deep}
+              />
             </View>
-          </View>
+          </Animated.View>
         )}
 
-        {/* ── Category Breakdown ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 16 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 }}>
-              {t(language, "byCategory")}
-            </Text>
-            {/* Toggle */}
-            <View style={{ flexDirection: "row", backgroundColor: colors.bgCard, borderRadius: 10, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+        <Animated.View
+          style={{
+            opacity: listAnim,
+            transform: [{ translateY: listAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+            marginHorizontal: 16,
+            marginTop: 18,
+          }}
+        >
+          <View style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 }}>
+                  {t(language, "byCategory")}
+                </Text>
+
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(true)}
+                className="px-3 py-1.5 rounded-xl flex-row items-center"
+                style={{
+                  backgroundColor: filterMonth !== "all" ? palette.main : cardBg,
+                  borderColor: filterMonth !== "all" ? palette.main : cardBorder,
+                  borderWidth: 1
+                }}
+              >
+                <Text style={{ color: filterMonth !== "all" ? "#fff" : colors.textMuted }} className="text-[11px] font-bold">
+                  {filterMonth !== "all" ? "Filtered" : "Filter"} ⚙️
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: "row", backgroundColor: cardBg, borderRadius: 18, borderWidth: 1.25, borderColor: cardBorder, overflow: "hidden", padding: 3, marginTop: 12 }}>
               <TouchableOpacity
                 onPress={() => setViewType(TransactionType.EXPENSE)}
                 style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  backgroundColor: viewType === TransactionType.EXPENSE ? "#ef4444" : "transparent",
+                  flex: 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 11,
+                  backgroundColor: viewType === TransactionType.EXPENSE ? palette.main : "transparent",
+                  borderRadius: 12,
+                  marginRight: 3,
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: viewType === TransactionType.EXPENSE ? "#fff" : colors.textMuted, fontSize: 12, fontWeight: "700" }}>
+                <Text style={{ color: viewType === TransactionType.EXPENSE ? "#fff" : colors.textMuted, fontSize: 13, fontWeight: "800" }}>
                   {t(language, "expense")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setViewType(TransactionType.INCOME)}
                 style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  backgroundColor: viewType === TransactionType.INCOME ? "#10b981" : "transparent",
+                  flex: 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 11,
+                  backgroundColor: viewType === TransactionType.INCOME ? palette.main : "transparent",
+                  borderRadius: 12,
+                  marginLeft: 3,
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: viewType === TransactionType.INCOME ? "#fff" : colors.textMuted, fontSize: 12, fontWeight: "700" }}>
+                <Text style={{ color: viewType === TransactionType.INCOME ? "#fff" : colors.textMuted, fontSize: 13, fontWeight: "800" }}>
                   {t(language, "income")}
                 </Text>
               </TouchableOpacity>
@@ -462,135 +782,102 @@ export const StatisticsScreen: React.FC<Props> = ({ navigation }) => {
           {breakdown.length === 0 ? (
             <View
               style={{
-                backgroundColor: colors.bgCard,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-                padding: 32,
+                backgroundColor: cardBg,
+                borderRadius: 24,
+                borderWidth: 1.25,
+                borderColor: cardBorder,
+                padding: 40,
                 alignItems: "center",
+                shadowColor: palette.main,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 2,
               }}
             >
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>📊</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "600" }}>{t(language, "noData")}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: "center" }}>
+              <Text style={{ fontSize: 44, marginBottom: 10, color: colors.textMuted }}>◫</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: "800" }}>{t(language, "noData")}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 6, textAlign: "center" }}>
                 {viewType === TransactionType.EXPENSE ? "Belum ada pengeluaran" : "Belum ada pemasukan"}
               </Text>
             </View>
           ) : (
-            <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+            <View
+              style={{
+                backgroundColor: cardBg,
+                borderRadius: 30,
+                borderWidth: 1.5,
+                borderColor: cardBorder,
+                overflow: "hidden",
+                shadowColor: palette.main,
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 18,
+                elevation: 3,
+              }}
+            >
               {breakdown.map((item, idx) => {
-                const accentColor = viewType === TransactionType.INCOME ? "#10b981" : "#ef4444";
-                const barColor = DONUT_COLORS[idx % DONUT_COLORS.length];
+                const targetBar = (item.percentage / 100) * TRACK_WIDTH;
                 return (
                   <View
                     key={item.category}
                     style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      borderBottomWidth: idx < breakdown.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
+                      paddingHorizontal: 18,
+                      paddingVertical: 16,
+                      borderBottomWidth: idx < breakdown.length - 1 ? 1.25 : 0,
+                      borderBottomColor: cardBorder,
+                      backgroundColor: idx % 2 === 0 ? "transparent" : (isDark ? "#ffffff08" : palette.bgLight),
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                      {/* Rank */}
-                      <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "700", width: 18 }}>#{idx + 1}</Text>
-                      {/* Emoji */}
-                      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: barColor + "22", alignItems: "center", justifyContent: "center", marginRight: 10 }}>
-                        <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 10,
+                          backgroundColor: idx % 2 === 0 ? palette.bgLight : palette.bgLight,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginRight: 12,
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, color: idx % 2 === 0 ? palette.main : palette.deep, fontWeight: "700" }}>
+                          {idx + 1}
+                        </Text>
                       </View>
-                      {/* Label + Count */}
+
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: colors.text, fontWeight: "700", fontSize: 13 }}>
+                        <Text style={{ color: colors.text, fontWeight: "800", fontSize: 14 }}>
                           {getCategoryInfo(item.category).isCustom ? item.label : t(language, item.label)}
                         </Text>
-                        <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                          {item.count} {t(language, "items")}
+                        <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "500", marginTop: 2 }}>
+                          {item.count} {t(language, "items")} • {item.percentage.toFixed(1)}%
                         </Text>
                       </View>
-                      {/* Amount + % */}
+
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text style={{ color: accentColor, fontWeight: "800", fontSize: 14 }}>{fmt(item.total)}</Text>
-                        <Text style={{ color: colors.textMuted, fontSize: 11 }}>{item.percentage.toFixed(1)}%</Text>
+                        <Text style={{ color: idx % 2 === 0 ? palette.main : palette.deep, fontWeight: "900", fontSize: 15 }}>
+                          {fmt(item.total)}
+                        </Text>
                       </View>
                     </View>
-                    {/* Progress bar */}
-                    <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: "hidden" }}>
-                      <View style={{ width: `${item.percentage}%`, height: "100%", backgroundColor: barColor, borderRadius: 3 }} />
+
+                    <View style={{ width: TRACK_WIDTH, height: 8, backgroundColor: cardBorder, borderRadius: 4, overflow: "hidden", marginTop: 4 }}>
+                      <Animated.View
+                        style={{
+                          width: listAnim.interpolate({ inputRange: [0, 1], outputRange: [0, targetBar] }),
+                          height: "100%",
+                          backgroundColor: idx % 2 === 0 ? palette.main : palette.deep,
+                          borderRadius: 4,
+                        }}
+                      />
                     </View>
                   </View>
                 );
               })}
             </View>
           )}
-        </View>
-
-        {/* ── Export Button ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 8 }}>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
-            Export Data
-          </Text>
-          <TouchableOpacity
-            onPress={exporting ? undefined : handleExport}
-            activeOpacity={0.8}
-            style={{
-              borderRadius: 16,
-              overflow: "hidden",
-              opacity: exporting ? 0.7 : 1,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: "#6366f1",
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ fontSize: 20, marginRight: 10 }}>{exporting ? "⏳" : "📤"}</Text>
-              <View>
-                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-                  {exporting ? "Menyiapkan..." : t(language, "exportCSV")}
-                </Text>
-                <Text style={{ color: "#c7d2fe", fontSize: 11, marginTop: 1 }}>
-                  {transactions.length} transaksi • {currency}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Export summary */}
-          {hasData && (
-            <View
-              style={{
-                marginTop: 10,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.bgCard,
-                padding: 14,
-              }}
-            >
-              <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
-                Preview Data
-              </Text>
-              {[
-                { label: "Total Transaksi", value: `${transactions.length} baris`, color: colors.text },
-                { label: t(language, "income"), value: fmt(totalIncome), color: "#10b981" },
-                { label: t(language, "expense"), value: fmt(totalExpense), color: "#ef4444" },
-                { label: "Net Balance", value: fmt(balance), color: balance >= 0 ? "#10b981" : "#ef4444" },
-                { label: "Format", value: "CSV (Excel-ready)", color: "#6366f1" },
-              ].map((row, i) => (
-                <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: i < 4 ? 6 : 0 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{row.label}</Text>
-                  <Text style={{ color: row.color, fontSize: 12, fontWeight: "700" }}>{row.value}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

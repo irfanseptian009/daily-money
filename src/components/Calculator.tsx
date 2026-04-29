@@ -18,7 +18,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
   onConfirm,
   initialValue = "",
 }) => {
-  const { colors, language } = useSettings();
+  const { colors, language, palette } = useSettings();
   const [display, setDisplay] = useState(initialValue || "0");
   const [previousValue, setPreviousValue] = useState<string | null>(null);
   const [operator, setOperator] = useState<Operator>(null);
@@ -79,7 +79,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
           <View className="flex-row justify-between items-center mb-4 px-2">
             <TouchableOpacity onPress={handleClose}><Text style={{ color: colors.textSecondary }} className="text-base font-medium">{t(language, "cancel")}</Text></TouchableOpacity>
             <Text style={{ color: colors.text }} className="text-lg font-bold">{t(language, "calculator")}</Text>
-            <TouchableOpacity onPress={handleConfirm}><Text className="text-income-400 text-base font-bold">{t(language, "use")}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleConfirm}><Text style={{ color: palette.main }} className="text-base font-bold">{t(language, "use")}</Text></TouchableOpacity>
           </View>
 
           <View style={{ backgroundColor: colors.bgCard, borderColor: colors.border, borderWidth: 1 }} className="rounded-2xl px-5 py-4 mb-4">
@@ -94,30 +94,30 @@ export const Calculator: React.FC<CalculatorProps> = ({
               {renderButton("C", handleClear, undefined, "#ef4444")}
               {renderButton("⌫", handleBackspace)}
               {renderButton("%", handlePercent)}
-              {renderButton("÷", () => handleOperator("÷"), "#10b98120", "#10b981")}
+              {renderButton("÷", () => handleOperator("÷"), palette.bgLight, palette.main)}
             </View>
             <View className="flex-row">
               {renderButton("7", () => handleNumber("7"))}
               {renderButton("8", () => handleNumber("8"))}
               {renderButton("9", () => handleNumber("9"))}
-              {renderButton("×", () => handleOperator("×"), "#10b98120", "#10b981")}
+              {renderButton("×", () => handleOperator("×"), palette.bgLight, palette.main)}
             </View>
             <View className="flex-row">
               {renderButton("4", () => handleNumber("4"))}
               {renderButton("5", () => handleNumber("5"))}
               {renderButton("6", () => handleNumber("6"))}
-              {renderButton("-", () => handleOperator("-"), "#10b98120", "#10b981")}
+              {renderButton("-", () => handleOperator("-"), palette.bgLight, palette.main)}
             </View>
             <View className="flex-row">
               {renderButton("1", () => handleNumber("1"))}
               {renderButton("2", () => handleNumber("2"))}
               {renderButton("3", () => handleNumber("3"))}
-              {renderButton("+", () => handleOperator("+"), "#10b98120", "#10b981")}
+              {renderButton("+", () => handleOperator("+"), palette.bgLight, palette.main)}
             </View>
             <View className="flex-row">
               {renderButton("0", () => handleNumber("0"), undefined, undefined, 2)}
               {renderButton(".", handleDecimal)}
-              {renderButton("=", handleEquals, "#10b981", "#fff")}
+              {renderButton("=", handleEquals, palette.main, "#fff")}
             </View>
           </View>
         </View>

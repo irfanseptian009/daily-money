@@ -53,7 +53,7 @@ const BENEFITS = [
 ];
 
 export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
-  const { colors, language } = useSettings();
+  const { colors, language, palette } = useSettings();
   const { isPremium, activatePremium } = usePremium();
   const [selectedOption, setSelectedOption] = useState<string>("premium");
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -107,13 +107,13 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
         {/* Active badge */}
         <View
           className="px-6 py-3 rounded-full"
-          style={{ backgroundColor: "#10b981" + "22", borderColor: "#10b981", borderWidth: 1.5 }}
+          style={{ backgroundColor: palette.bgLight, borderColor: palette.main, borderWidth: 1.5 }}
         >
-          <Text className="text-income-400 font-bold text-base">✓ {t(language, "premiumActive")}</Text>
+          <Text className="font-bold text-base" style={{ color: palette.main }}>✓ {t(language, "premiumActive")}</Text>
         </View>
 
         {/* Benefits recap */}
-        <View className="mt-8 w-full" style={{ backgroundColor: colors.bgCard, borderColor: colors.border, borderWidth: 1 }} >
+        <View className="mt-8 w-full rounded-2xl overflow-hidden" style={{ backgroundColor: colors.bgCard, borderColor: colors.border, borderWidth: 1 }} >
           {BENEFITS.map((b, i) => (
             <View
               key={b.key}
@@ -122,7 +122,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
             >
               <Text className="text-lg mr-3">{b.icon}</Text>
               <Text style={{ color: colors.text }} className="text-sm font-medium">{t(language, b.key)}</Text>
-              <Text className="ml-auto text-income-400 font-bold">✓</Text>
+              <Text className="ml-auto font-bold" style={{ color: palette.main }}>✓</Text>
             </View>
           ))}
         </View>
@@ -145,6 +145,11 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
             backgroundColor: "#0f172a",
             borderColor: "#334155",
             borderWidth: 1,
+            shadowColor: "#020617",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.24,
+            shadowRadius: 18,
+            elevation: 6,
           }}
         >
           {/* Gold gradient header */}
@@ -202,7 +207,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
               >
                 <View
                   className="w-9 h-9 rounded-full items-center justify-center mr-3"
-                  style={{ backgroundColor: "#10b98120" }}
+                  style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
                 >
                   <Text className="text-base">{b.icon}</Text>
                 </View>
@@ -214,7 +219,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                 </Text>
                 <View
                   className="w-5 h-5 rounded-full items-center justify-center"
-                  style={{ backgroundColor: "#10b981" }}
+                  style={{ backgroundColor: palette.main }}
                 >
                   <Text className="text-white text-xs font-bold">✓</Text>
                 </View>
@@ -239,18 +244,18 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                 key={option.id}
                 onPress={() => setSelectedOption(option.id)}
                 activeOpacity={0.8}
-                className="mb-3 rounded-2xl overflow-hidden"
+                className="mb-3 rounded-[24px] overflow-hidden"
                 style={{
                   borderWidth: isSelected ? 2 : 1,
                   borderColor: isSelected
                     ? option.highlight
                       ? "#fbbf24"
-                      : "#10b981"
+                      : palette.main
                     : colors.border,
                   backgroundColor: isSelected
                     ? option.highlight
                       ? "#fbbf2408"
-                      : "#10b98108"
+                      : palette.bgLight
                     : colors.bgCard,
                 }}
               >
@@ -258,7 +263,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                   <View
                     className="py-1.5 items-center"
                     style={{
-                      backgroundColor: option.highlight ? "#fbbf24" : "#10b981",
+                      backgroundColor: option.highlight ? "#fbbf24" : palette.main,
                     }}
                   >
                     <Text className="text-xs font-bold text-black">
@@ -275,7 +280,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                       borderColor: isSelected
                         ? option.highlight
                           ? "#fbbf24"
-                          : "#10b981"
+                          : palette.main
                         : colors.border,
                     }}
                   >
@@ -283,7 +288,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                       <View
                         className="w-2.5 h-2.5 rounded-full"
                         style={{
-                          backgroundColor: option.highlight ? "#fbbf24" : "#10b981",
+                          backgroundColor: option.highlight ? "#fbbf24" : palette.main,
                         }}
                       />
                     )}
@@ -312,7 +317,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                       color: isSelected
                         ? option.highlight
                           ? "#fbbf24"
-                          : "#10b981"
+                          : palette.main
                         : colors.text,
                     }}
                   >
@@ -342,7 +347,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
           >
             {t(language, "premiumCompare")}
           </Text>
-          <View style={{ backgroundColor: colors.bgCard, borderColor: colors.border, borderWidth: 1 }} className="rounded-2xl overflow-hidden">
+          <View style={{ backgroundColor: colors.bgCard, borderColor: colors.border, borderWidth: 1 }} className="rounded-3xl overflow-hidden">
             {/* Header row */}
             <View className="flex-row" style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}>
               <View className="flex-2 py-3 px-4" style={{ flex: 2 }}>
@@ -374,7 +379,7 @@ export const PremiumScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={{ color: colors.textMuted }} className="text-xs">{row.free}</Text>
                 </View>
                 <View className="flex-1 py-3 px-2 items-center" style={{ flex: 1, backgroundColor: "#fbbf2405", borderLeftColor: "#fbbf24", borderLeftWidth: 1 }}>
-                  <Text className="text-xs font-bold" style={{ color: "#10b981" }}>{row.pro}</Text>
+                  <Text className="text-xs font-bold" style={{ color: palette.main }}>{row.pro}</Text>
                 </View>
               </View>
             ))}

@@ -2,6 +2,7 @@ import "./global.css";
 import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import mobileAds from 'react-native-google-mobile-ads';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { AddTransactionScreen } from "./src/screens/AddTransactionScreen";
@@ -26,10 +27,11 @@ function AppNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: "700", fontSize: 18 },
+        headerTitleStyle: { fontWeight: "800", fontSize: 20 },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
         animation: "slide_from_right",
+        headerBackTitleVisible: false,
       }}
     >
       <Stack.Screen
@@ -81,23 +83,23 @@ export default function App() {
   useEffect(() => {
     mobileAds()
       .initialize()
-      .then(adapterStatuses => {
-        console.log("AdMob SDK Initialized", adapterStatuses);
-      })
+      .then(() => {})
       .catch(err => {
         console.error("AdMob initialization failed", err);
       });
   }, []);
 
   return (
-    <SettingsProvider>
-      <PremiumProvider>
-        <CategoriesProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        </CategoriesProvider>
-      </PremiumProvider>
-    </SettingsProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SettingsProvider>
+        <PremiumProvider>
+          <CategoriesProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </CategoriesProvider>
+        </PremiumProvider>
+      </SettingsProvider>
+    </GestureHandlerRootView>
   );
 }

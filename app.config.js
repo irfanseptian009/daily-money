@@ -23,6 +23,7 @@ module.exports = {
     package: "com.dailymoney.tracker",
   },
   plugins: [
+    "expo-font",
     [
       "react-native-google-mobile-ads",
       {
@@ -33,7 +34,7 @@ module.exports = {
   ],
   extra: {
     eas: {
-      projectId: "your-project-id-here",
+      projectId: "1f6bca5a-3d4c-4641-be15-6142a736ace4",
     },
   },
 };

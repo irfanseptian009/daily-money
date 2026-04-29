@@ -8,20 +8,25 @@ export const EmptyState: React.FC = () => {
 
   return (
     <View className="flex-1 items-center justify-center px-8 py-16">
-      <View style={{ backgroundColor: colors.bgCard }} className="w-20 h-20 rounded-full items-center justify-center mb-5">
-        <Text className="text-4xl">💰</Text>
+      <View
+        style={{
+          backgroundColor: colors.bgCard,
+          borderColor: colors.border,
+          borderWidth: 1,
+          shadowColor: "#0f172a",
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          elevation: 3,
+        }}
+        className="w-24 h-24 rounded-3xl items-center justify-center mb-5"
+      >
+        <Text className="text-6xl">📋</Text>
       </View>
-      <Text style={{ color: colors.text }} className="text-xl font-bold text-center mb-2">
+      <Text style={{ color: colors.text }} className="text-2xl font-extrabold text-center mb-2">
         {t(language, "noTransactions")}
       </Text>
-      <Text style={{ color: colors.textSecondary }} className="text-sm text-center leading-5">
-        {t(language, "noTransactionsDesc")}
-      </Text>
-      <View style={{ backgroundColor: colors.bgCard }} className="flex-row items-center mt-6 px-4 py-2.5 rounded-full">
-        <Text style={{ color: colors.textSecondary }} className="text-xs">
-          {t(language, "tapToStart")}
-        </Text>
-      </View>
+
     </View>
   );
 };
