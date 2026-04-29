@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from "react";
 import {
-  View, Text, TouchableOpacity, ScrollView, StatusBar, Modal, FlatList, Switch,
+  View, Text, TouchableOpacity, ScrollView, StatusBar, Modal, FlatList, Switch, Image, Alert, TextInput, ImageBackground,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { useSettings, PrimaryColor, primaryPalettes } from "../context/SettingsContext";
 import { usePremium } from "../context/PremiumContext";
+import { useProfile, EMOJI_AVATARS } from "../context/ProfileContext";
 import { t } from "../config/translations";
 import { LANGUAGES } from "../config/translations";
 import { CURRENCIES, getCurrencyByCode } from "../config/currencies";
@@ -15,8 +16,13 @@ type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { currency, setCurrency, language, setLanguage, theme, setTheme, colors, primaryColor, setPrimaryColor, palette } = useSettings();
   const { isPremium } = usePremium();
+  const { profile, setName, pickPhoto, takePhoto, setEmojiAvatar, removePhoto, getInitials } = useProfile();
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [showEmojiModal, setShowEmojiModal] = useState(false);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
+  const [editName, setEditName] = useState(profile.name);
 
   const currencyInfo = getCurrencyByCode(currency);
   const isDark = theme === "dark";
@@ -68,8 +74,136 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
       <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}>
 
+        {/* Profile Section */}
+        <View className="mx-4 mb-6">
+
+          <View
+            style={{
+              backgroundColor: panelBg,
+              borderColor: panelBorder,
+              borderWidth: 1,
+              shadowColor: palette.main,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10,
+              elevation: 2,
+            }}
+            className="rounded-3xl overflow-hidden"
+          >
+            <ImageBackground
+              source={require("../../assets/transaction.png")}
+              style={{ flex: 1 }}
+              imageStyle={{ opacity: 0.18 }}
+              resizeMode="cover"
+            >
+              <View className="items-center py-6 px-4">
+                {/* Avatar */}
+                <TouchableOpacity
+                  onPress={() => setShowPhotoSourceModal(true)}
+                  activeOpacity={0.8}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    overflow: "hidden",
+                    borderWidth: 3,
+                    borderColor: palette.main,
+                    shadowColor: palette.main,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 12,
+                    elevation: 6,
+                    marginBottom: 12,
+                  }}
+                >
+                  {profile.photoUri ? (
+                    profile.photoUri.startsWith("emoji:") ? (
+                      <View
+                        style={{
+                          width: 74,
+                          height: 74,
+                          borderRadius: 37,
+                          backgroundColor: palette.main,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ fontSize: 36 }}>{profile.photoUri.replace("emoji:", "")}</Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: profile.photoUri }}
+                        style={{ width: 74, height: 74, borderRadius: 37 }}
+                      />
+                    )
+                  ) : (
+                    <View
+                      style={{
+                        width: 74,
+                        height: 74,
+                        borderRadius: 37,
+                        backgroundColor: palette.main,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 1 }}>
+                        {getInitials()}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={{ color: colors.text }} className="text-lg font-black mb-1">
+                  {profile.name || "User"}
+                </Text>
+                <Text style={{ color: colors.textMuted }} className="text-xs mb-4">
+                  {language === "id" ? "Ketuk foto untuk mengganti" : "Tap photo to change"}
+                </Text>
+
+                {/* Action Buttons */}
+                <View className="flex-row items-center" style={{ gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => { setEditName(profile.name); setShowNameModal(true); }}
+                    className="px-5 py-2.5 rounded-2xl flex-row items-center"
+                    style={{
+                      backgroundColor: palette.bgLight,
+                      borderWidth: 1,
+                      borderColor: palette.soft,
+                    }}
+                  >
+                    <Text style={{ color: palette.deep }} className="text-xs font-bold">
+                      ✏️ {language === "id" ? "Ubah Nama" : "Edit Name"}
+                    </Text>
+                  </TouchableOpacity>
 
 
+
+
+
+                  {profile.photoUri && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          language === "id" ? "Hapus Foto" : "Remove Photo",
+                          language === "id" ? "Yakin ingin menghapus foto profil?" : "Are you sure you want to remove your photo?",
+                          [
+                            { text: language === "id" ? "Batal" : "Cancel", style: "cancel" },
+                            { text: language === "id" ? "Hapus" : "Remove", style: "destructive", onPress: removePhoto },
+                          ]
+                        );
+                      }}
+                      className="px-4 py-2.5 rounded-2xl"
+                      style={{ backgroundColor: "#fee2e2", borderWidth: 1, borderColor: "#fca5a5" }}
+                    >
+                      <Text style={{ color: "#dc2626" }} className="text-xs font-bold">✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </ImageBackground>
+          </View>
+        </View>
         {renderSection(t(language, "theme"), (
           <>
             <View className="flex-row items-center px-4 py-4" style={{ borderBottomColor: panelBorder, borderBottomWidth: 0.5 }}>
@@ -269,6 +403,208 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             ))}
           </View>
         </View>
+      </Modal>
+
+      {/* Name Edit Modal */}
+      <Modal visible={showNameModal} animationType="fade" transparent>
+        <View className="flex-1 justify-center items-center" style={{ backgroundColor: "rgba(0,0,0,0.6)" }}>
+          <View
+            style={{
+              backgroundColor: panelBg,
+              borderColor: panelBorder,
+              borderWidth: 1,
+              width: "85%",
+              borderRadius: 28,
+              padding: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 20 },
+              shadowOpacity: 0.25,
+              shadowRadius: 25,
+              elevation: 20,
+            }}
+          >
+            <Text style={{ color: colors.text }} className="text-xl font-black mb-4">
+              {language === "id" ? "Ubah Nama" : "Edit Name"}
+            </Text>
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              placeholder={language === "id" ? "Masukkan nama" : "Enter your name"}
+              placeholderTextColor={colors.textMuted}
+              style={{
+                backgroundColor: isDark ? "#0f172a" : "#f8fafc",
+                borderColor: colors.border,
+                borderWidth: 1,
+                color: colors.text,
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                fontWeight: "600",
+                marginBottom: 20,
+              }}
+              maxLength={30}
+              autoFocus
+            />
+            <View className="flex-row" style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowNameModal(false)}
+                className="flex-1 py-3.5 items-center rounded-2xl"
+                style={{ backgroundColor: isDark ? "#1f2937" : "#f1f5f9", borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text style={{ color: colors.textSecondary }} className="font-bold">
+                  {language === "id" ? "Batal" : "Cancel"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setName(editName.trim());
+                  setShowNameModal(false);
+                }}
+                className="flex-1 py-3.5 items-center rounded-2xl"
+                style={{ backgroundColor: palette.main }}
+              >
+                <Text className="text-white font-bold">
+                  {language === "id" ? "Simpan" : "Save"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Emoji Avatar Modal */}
+      <Modal visible={showEmojiModal} animationType="slide" transparent>
+        <View className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.6)" }}>
+          <View
+            style={{
+              backgroundColor: panelBg,
+              borderColor: panelBorder,
+              borderTopWidth: 1,
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              paddingTop: 24,
+              paddingBottom: 40,
+              paddingHorizontal: 20,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-5">
+              <Text style={{ color: colors.text }} className="text-xl font-black">
+                {language === "id" ? "Pilih Avatar Emoji" : "Choose Emoji Avatar"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowEmojiModal(false)}>
+                <Text className="font-bold text-lg" style={{ color: palette.main }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View className="flex-row flex-wrap justify-center" style={{ gap: 8 }}>
+              {EMOJI_AVATARS.map((emoji, idx) => {
+                const isActive = profile.photoUri === `emoji:${emoji}`;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      setEmojiAvatar(emoji);
+                      setShowEmojiModal(false);
+                    }}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 26,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isActive ? palette.main : (isDark ? "#111827" : "#f8fafc"),
+                      borderWidth: isActive ? 2.5 : 1,
+                      borderColor: isActive ? palette.deep : colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Photo Source Selection Modal */}
+      <Modal visible={showPhotoSourceModal} animationType="fade" transparent>
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowPhotoSourceModal(false)}
+          className="flex-1 justify-end bg-black/60"
+        >
+          <View
+            style={{
+              backgroundColor: panelBg,
+              borderColor: panelBorder,
+              borderTopWidth: 1,
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              paddingTop: 24,
+              paddingBottom: 40,
+              paddingHorizontal: 20,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-6">
+              <Text style={{ color: colors.text }} className="text-xl font-black">
+                {language === "id" ? "Pilih Sumber Foto" : "Choose Photo Source"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowPhotoSourceModal(false)}>
+                <Text className="font-bold text-lg" style={{ color: palette.main }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => { setShowPhotoSourceModal(false); setShowEmojiModal(true); }}
+                className="flex-row items-center p-4 rounded-2xl"
+                style={{ backgroundColor: isDark ? "#1f2937" : "#f8fafc", borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text className="text-2xl mr-4">😀</Text>
+                <View>
+                  <Text style={{ color: colors.text }} className="text-base font-bold">
+                    {language === "id" ? "Gunakan Emoji" : "Use Emoji"}
+                  </Text>
+                  <Text style={{ color: colors.textMuted }} className="text-xs">
+                    {language === "id" ? "Pilih dari koleksi emoji" : "Choose from emoji collection"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => { setShowPhotoSourceModal(false); takePhoto(); }}
+                className="flex-row items-center p-4 rounded-2xl"
+                style={{ backgroundColor: isDark ? "#1f2937" : "#f8fafc", borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text className="text-2xl mr-4">📸</Text>
+                <View>
+                  <Text style={{ color: colors.text }} className="text-base font-bold">
+                    {language === "id" ? "Ambil Foto" : "Take Photo"}
+                  </Text>
+                  <Text style={{ color: colors.textMuted }} className="text-xs">
+                    {language === "id" ? "Gunakan kamera ponsel" : "Use phone camera"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => { setShowPhotoSourceModal(false); pickPhoto(); }}
+                className="flex-row items-center p-4 rounded-2xl"
+                style={{ backgroundColor: isDark ? "#1f2937" : "#f8fafc", borderWidth: 1, borderColor: colors.border }}
+              >
+                <Text className="text-2xl mr-4">🖼️</Text>
+                <View>
+                  <Text style={{ color: colors.text }} className="text-base font-bold">
+                    {language === "id" ? "Pilih dari Galeri" : "Pick from Gallery"}
+                  </Text>
+                  <Text style={{ color: colors.textMuted }} className="text-xs">
+                    {language === "id" ? "Gunakan foto yang sudah ada" : "Use existing photo"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

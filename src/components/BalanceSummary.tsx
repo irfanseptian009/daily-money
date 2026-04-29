@@ -88,9 +88,9 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({ totalIncome, tot
           }}
         >
           <View className="flex-row items-center mb-1">
-            <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: "#10b981" }} />
+
             <Text style={{ color: "#059669" }} className="text-[11px] font-bold uppercase tracking-[1.5px]">
-              {t(language, "income")}
+              ▼{t(language, "income")}
             </Text>
           </View>
           <Text className="text-xl font-extrabold" style={{ color: "#047857", letterSpacing: -0.2 }} numberOfLines={1} adjustsFontSizeToFit>
@@ -107,9 +107,8 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({ totalIncome, tot
           }}
         >
           <View className="flex-row items-center mb-1">
-            <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: "#f43f5e" }} />
             <Text style={{ color: "#e11d48", }} className="text-[11px] font-bold uppercase tracking-[1.5px]">
-              {t(language, "expense")}
+              🔺{t(language, "expense")}
             </Text>
           </View>
           <Text className="text-xl font-extrabold" style={{ color: "#be123c", letterSpacing: -0.2 }} numberOfLines={1} adjustsFontSizeToFit>

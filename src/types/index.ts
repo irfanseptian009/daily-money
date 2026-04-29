@@ -32,4 +32,5 @@ export type RootStackParamList = {
   Settings: undefined;
   ManageCategories: undefined;
   Premium: undefined;
+  Notifications: undefined;
 };

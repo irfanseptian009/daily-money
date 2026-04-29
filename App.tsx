@@ -10,10 +10,12 @@ import { StatisticsScreen } from "./src/screens/StatisticsScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { ManageCategoriesScreen } from "./src/screens/ManageCategoriesScreen";
 import { PremiumScreen } from "./src/screens/PremiumScreen";
+import { NotificationScreen } from "./src/screens/NotificationScreen";
 import { RootStackParamList } from "./src/types";
 import { SettingsProvider, useSettings } from "./src/context/SettingsContext";
 import { CategoriesProvider } from "./src/context/CategoriesContext";
 import { PremiumProvider } from "./src/context/PremiumContext";
+import { ProfileProvider } from "./src/context/ProfileContext";
 import { t } from "./src/config/translations";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -37,7 +39,7 @@ function AppNavigator() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: t(language, "appName"), headerTitleAlign: "left" }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="AddTransaction"
@@ -75,6 +77,11 @@ function AppNavigator() {
           headerTitleStyle: { fontWeight: "700", fontSize: 18, color: "#fbbf24" },
         }}
       />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationScreen}
+        options={{ title: language === "id" ? "Notifikasi" : "Notifications" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -83,7 +90,7 @@ export default function App() {
   useEffect(() => {
     mobileAds()
       .initialize()
-      .then(() => {})
+      .then(() => { })
       .catch(err => {
         console.error("AdMob initialization failed", err);
       });
@@ -94,9 +101,11 @@ export default function App() {
       <SettingsProvider>
         <PremiumProvider>
           <CategoriesProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
+            <ProfileProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </ProfileProvider>
           </CategoriesProvider>
         </PremiumProvider>
       </SettingsProvider>

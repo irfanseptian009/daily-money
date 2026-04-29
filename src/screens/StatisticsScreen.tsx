@@ -355,6 +355,7 @@ export const StatisticsScreen: React.FC<Props> = () => {
   const [exporting, setExporting] = useState(false);
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [trendInterval, setTrendInterval] = useState<"daily" | "weekly" | "monthly">("monthly");
 
   const isDark = theme === "dark";
   const cardBg = isDark ? "#0f172a" : "#ffffff";
@@ -431,30 +432,37 @@ export const StatisticsScreen: React.FC<Props> = () => {
     return result.sort((a, b) => b.total - a.total);
   }, [filteredData, viewType, getCategoryInfo]);
 
-  const monthlyData = useMemo(() => {
-    const months = new Map<string, { income: number; expense: number }>();
+  const chartData = useMemo(() => {
+    const dataMap = new Map<string, { income: number; expense: number; label: string }>();
+
     transactions.forEach((tx) => {
-      const mk = tx.date.substring(0, 7);
-      const e = months.get(mk) || { income: 0, expense: 0 };
+      let key = "";
+      let label = "";
+      const date = new Date(tx.date);
+      if (trendInterval === "daily") {
+        key = tx.date;
+        label = date.toLocaleDateString(language === "id" ? "id-ID" : "en-US", { weekday: "short", day: "numeric" });
+      } else if (trendInterval === "weekly") {
+        const d = new Date(date);
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+        key = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, "0")}`;
+        label = `W${weekNo}`;
+      } else {
+        key = tx.date.substring(0, 7);
+        label = date.toLocaleDateString(language === "id" ? "id-ID" : "en-US", { month: "short" });
+      }
+
+      const e = dataMap.get(key) || { income: 0, expense: 0, label };
       if (tx.type === TransactionType.INCOME) e.income += tx.amount;
       else e.expense += tx.amount;
-      months.set(mk, e);
+      dataMap.set(key, e);
     });
 
-    return Array.from(months.entries()).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).reverse();
-  }, [transactions]);
-
-  const chartData = useMemo(
-    () =>
-      monthlyData.map(([month, d]) => {
-        const [y, m] = month.split("-");
-        const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString(language === "id" ? "id-ID" : "en-US", {
-          month: "short",
-        });
-        return { label, income: d.income, expense: d.expense };
-      }),
-    [monthlyData, language]
-  );
+    const entries = Array.from(dataMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    return entries.slice(0, 6).reverse().map(([_, val]) => val);
+  }, [transactions, trendInterval, language]);
 
   const chartMaxVal = useMemo(() => Math.max(...chartData.map((d) => Math.max(d.income, d.expense)), 1), [chartData]);
 
@@ -658,11 +666,19 @@ export const StatisticsScreen: React.FC<Props> = () => {
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingHorizontal: 2 }}>
               <View>
                 <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 }}>
-                  {t(language, "monthlyTrend")}
+                  {trendInterval === "daily" ? "Daily Trend" : trendInterval === "weekly" ? "Weekly Trend" : t(language, "monthlyTrend")}
                 </Text>
               </View>
-              <View style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
-                <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>LAST 6 MONTHS</Text>
+              <View style={{ flexDirection: "row", backgroundColor: cardBg, borderColor: cardBorder, borderWidth: 1, borderRadius: 999, overflow: "hidden" }}>
+                <TouchableOpacity onPress={() => setTrendInterval("daily")} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: trendInterval === "daily" ? palette.main : "transparent" }}>
+                  <Text style={{ color: trendInterval === "daily" ? "#fff" : colors.textMuted, fontSize: 10, fontWeight: "800" }}>DAY</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setTrendInterval("weekly")} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: trendInterval === "weekly" ? palette.main : "transparent" }}>
+                  <Text style={{ color: trendInterval === "weekly" ? "#fff" : colors.textMuted, fontSize: 10, fontWeight: "800" }}>WEEK</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setTrendInterval("monthly")} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: trendInterval === "monthly" ? palette.main : "transparent" }}>
+                  <Text style={{ color: trendInterval === "monthly" ? "#fff" : colors.textMuted, fontSize: 10, fontWeight: "800" }}>MONTH</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -680,7 +696,7 @@ export const StatisticsScreen: React.FC<Props> = () => {
                 elevation: 2,
               }}
             >
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: "800", marginBottom: 10 }}>Monthly Bars</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: "800", marginBottom: 10 }}>Bar Chart</Text>
               <AnimatedTrendChart data={chartData} maxVal={chartMaxVal} textMuted={colors.textMuted} />
 
               <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 12, gap: 20 }}>
@@ -725,20 +741,6 @@ export const StatisticsScreen: React.FC<Props> = () => {
                 </Text>
 
               </View>
-
-              <TouchableOpacity
-                onPress={() => setShowFilterModal(true)}
-                className="px-3 py-1.5 rounded-xl flex-row items-center"
-                style={{
-                  backgroundColor: filterMonth !== "all" ? palette.main : cardBg,
-                  borderColor: filterMonth !== "all" ? palette.main : cardBorder,
-                  borderWidth: 1
-                }}
-              >
-                <Text style={{ color: filterMonth !== "all" ? "#fff" : colors.textMuted }} className="text-[11px] font-bold">
-                  {filterMonth !== "all" ? "Filtered" : "Filter"} ⚙️
-                </Text>
-              </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: "row", backgroundColor: cardBg, borderRadius: 18, borderWidth: 1.25, borderColor: cardBorder, overflow: "hidden", padding: 3, marginTop: 12 }}>

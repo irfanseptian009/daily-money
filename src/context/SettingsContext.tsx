@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Language } from "../config/translations";
 
 export type ThemeMode = "dark" | "light";
-export type PrimaryColor = "orange" | "blue" | "green" | "purple" | "rose" | "yellow";
+export type PrimaryColor = "orange" | "blue" | "green" | "gray" | "rose" | "yellow" | "pink" | "dark";
 
 export interface Palette {
   main: string;
@@ -17,11 +17,13 @@ export interface Palette {
 
 export const primaryPalettes: Record<PrimaryColor, Palette> = {
   orange: { main: "#fb923c", deep: "#ea580c", soft: "#fdba74", text: "#ea580c", bgLight: "#fb923c15", appBgLight: "#fff7ed", appBgDark: "#22130e" },
-  blue: { main: "#3b82f6", deep: "#2563eb", soft: "#93c5fd", text: "#2563eb", bgLight: "#3b82f615", appBgLight: "#eff6ff", appBgDark: "#0d1421" },
+  blue: { main: "#3b82f6", deep: "#2563eb", soft: "#93c5fd", text: "#2563eb", bgLight: "#3b82f615", appBgLight: "#eff6ff", appBgDark: "#141f33ff" },
   green: { main: "#10b981", deep: "#059669", soft: "#6ee7b7", text: "#059669", bgLight: "#10b98115", appBgLight: "#ecfdf5", appBgDark: "#0d1a15" },
-  purple: { main: "#8b5cf6", deep: "#7c3aed", soft: "#c4b5fd", text: "#7c3aed", bgLight: "#8b5cf615", appBgLight: "#f5f3ff", appBgDark: "#150d22" },
-  rose: { main: "#f43f5e", deep: "#e11d48", soft: "#fda4af", text: "#e11d48", bgLight: "#f43f5e15", appBgLight: "#fff1f2", appBgDark: "#220d13" },
+  gray: { main: "#6b7280", deep: "#4b5563", soft: "#9ca3af", text: "#4b5563", bgLight: "#6b728015", appBgLight: "#f9fafb", appBgDark: "#111827" },
+  rose: { main: "#f43f5e", deep: "#e11d48", soft: "#fda4af", text: "#e11d48", bgLight: "#f43f5e15", appBgLight: "#ffe0e3ff", appBgDark: "#220d13" },
   yellow: { main: "#eab308", deep: "#ca8a04", soft: "#fde047", text: "#ca8a04", bgLight: "#eab30815", appBgLight: "#fefce8", appBgDark: "#1f1b0d" },
+  pink: { main: "#ec4899", deep: "#db2777", soft: "#f472b6", text: "#db2777", bgLight: "#ec489915", appBgLight: "#ffc4e4ff", appBgDark: "#331724ff" },
+  dark: { main: "#1f2937", deep: "#111827", soft: "#374151", text: "#111827", bgLight: "#1f293715", appBgLight: "#c8cacfff", appBgDark: "#060d22ff" },
 };
 
 interface ThemeColors {
@@ -73,14 +75,14 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType>({
   currency: "IDR",
-  setCurrency: () => {},
+  setCurrency: () => { },
   language: "id",
-  setLanguage: () => {},
+  setLanguage: () => { },
   theme: "dark",
-  setTheme: () => {},
+  setTheme: () => { },
   colors: themes.dark,
   primaryColor: "orange",
-  setPrimaryColor: () => {},
+  setPrimaryColor: () => { },
   palette: primaryPalettes.orange,
 });
 
@@ -98,7 +100,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Migrate from old key if exists
         const oldStored = await AsyncStorage.getItem("@daily_money_settings");
         if (oldStored && !(await AsyncStorage.getItem(SETTINGS_KEY))) {
-           await AsyncStorage.setItem(SETTINGS_KEY, oldStored);
+          await AsyncStorage.setItem(SETTINGS_KEY, oldStored);
         }
 
         const stored = await AsyncStorage.getItem(SETTINGS_KEY);

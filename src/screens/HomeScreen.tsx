@@ -1,9 +1,10 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, useEffect } from "react";
 import {
-  View, Text, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Modal, ScrollView
+  View, Text, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Modal, ScrollView, Image
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BalanceSummary } from "../components/BalanceSummary";
 import { TransactionCard } from "../components/TransactionCard";
 import { EmptyState } from "../components/EmptyState";
@@ -12,6 +13,7 @@ import { useTransactions } from "../hooks/useTransactions";
 import { useSettings } from "../context/SettingsContext";
 import { usePremium } from "../context/PremiumContext";
 import { useCategories } from "../context/CategoriesContext";
+import { useProfile } from "../context/ProfileContext";
 import { t } from "../config/translations";
 import { normalizeCategoryEmoji } from "../config/categoryEmojis";
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
@@ -24,6 +26,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { colors, language, currency, theme, palette } = useSettings();
   const { isPremium } = usePremium();
   const { categories } = useCategories();
+  const { profile, getInitials } = useProfile();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [filterType, setFilterType] = useState<TransactionType | "all">("all");
@@ -72,9 +75,128 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const keyExtractor = useCallback((item: Transaction) => item.id, []);
 
+  const getGreeting = useCallback(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return language === "id" ? "Selamat Pagi" : "Good Morning";
+    if (hour < 17) return language === "id" ? "Selamat Siang" : "Good Afternoon";
+    if (hour < 19) return language === "id" ? "Selamat Sore" : "Good Evening";
+    return language === "id" ? "Selamat Malam" : "Good Night";
+  }, [language]);
+
+  const [greeting, setGreeting] = useState(getGreeting());
+
+  useEffect(() => {
+    setGreeting(getGreeting());
+    const interval = setInterval(() => setGreeting(getGreeting()), 60000);
+    return () => clearInterval(interval);
+  }, [getGreeting]);
+
+  const AVATAR_GRADIENTS = [
+    ["#667eea", "#764ba2"],
+    ["#f093fb", "#f5576c"],
+    ["#4facfe", "#00f2fe"],
+    ["#43e97b", "#38f9d7"],
+    ["#fa709a", "#fee140"],
+    ["#a18cd1", "#fbc2eb"],
+  ];
+
+  const avatarGradient = useMemo(() => {
+    const name = profile.name || "U";
+    const idx = name.charCodeAt(0) % AVATAR_GRADIENTS.length;
+    return AVATAR_GRADIENTS[idx];
+  }, [profile.name]);
+
   const ListHeader = useCallback(() => (
     <>
+      {/* Modern Header Bar */}
+      <View className="px-4 pt-3 pb-4">
+        <View className="flex-row items-center justify-between">
+          {/* Left: Avatar + Greeting */}
+          <View className="flex-row items-center flex-1">
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Settings")}
+              activeOpacity={0.8}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                overflow: "hidden",
+                borderWidth: 2.5,
+                borderColor: palette.main,
+                shadowColor: palette.main,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+            >
+              {profile.photoUri ? (
+                profile.photoUri.startsWith("emoji:") ? (
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: avatarGradient[0],
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 24 }}>{profile.photoUri.replace("emoji:", "")}</Text>
+                  </View>
+                ) : (
+                  <Image
+                    source={{ uri: profile.photoUri }}
+                    style={{ width: 44, height: 44, borderRadius: 22 }}
+                  />
+                )
+              ) : (
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: avatarGradient[0],
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 1 }}>
+                    {getInitials()}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
+            <View className="ml-3 flex-1">
+              <Text style={{ color: colors.textMuted }} className="text-xs font-semibold">
+                {greeting} 👋
+              </Text>
+              <Text style={{ color: colors.text }} className="text-lg font-black" numberOfLines={1}>
+                {profile.name || "User"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Right: Notification bell */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Notifications")}
+            activeOpacity={0.7}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: theme === "dark" ? "#1f293750" : "#f1f5f9",
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>🔔</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <BalanceSummary totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} />
       <View className="mt-2">
@@ -110,7 +232,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <View style={{ backgroundColor: colors.bg }} className="flex-1">
+    <SafeAreaView style={{ backgroundColor: colors.bg, flex: 1 }} edges={["top"]}>
       <StatusBar barStyle={colors.statusBar} backgroundColor={colors.bg} />
       <FlatList
         data={filteredTransactions}
@@ -131,7 +253,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       {/* Bottom Ad / Premium Area */}
-      <View
+      {/* <View
         pointerEvents="box-none"
         style={{
           position: "absolute",
@@ -185,7 +307,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
         )}
-      </View>
+      </View> */}
 
       <View
         className="absolute left-4 right-4 flex-row items-center justify-between rounded-[32px] px-3"
@@ -194,7 +316,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           height: 70,
           backgroundColor: theme === "dark" ? "rgba(15, 23, 42, 0.85)" : "rgba(255, 255, 255, 0.9)",
           borderColor: palette.soft,
-          borderWidth: 1,
+          borderWidth: 0.3,
           shadowColor: palette.main,
           shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.15,
@@ -354,6 +476,6 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
